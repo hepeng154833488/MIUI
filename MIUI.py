@@ -1,52 +1,57 @@
 import requests
-from random import choice
+import json
+import random
 from bs4 import BeautifulSoup
 import time
 
-# arr = ['小米8周年,祝福小米越办越好','只希望相机能够流畅','回复不加积分了，什么时候能进miui10','您好，楼主建议等待下个版本更新看看','为什么我的内测申请还没有通过。。','羡慕能用MIUI10的','静静等待中！！着急如焚','MIUI10什么时候出稳定版啊','如何入手MIUI10?','MIUI10好用吗?','你们都是用什么版本的MIUI','内测资格在哪里申请啊?','好想用MIUI10啊','稳定版的MIUI10什么时候才能推送啊','现在的MIUI10是体验版吗?','能否帮忙点个赞,还差点分就进内测组了.','小米MIUI10系统就是强大快更新吧','此生不悔入小米,为了进内测组,兄弟姐妹门帮忙点个赞再走呗.']
-arr = ['','感谢你的分享 ，期待分享更多给力资源！','顶。。。。。。。。。。。。。。。。','感觉分享!!!','支持一下!!!','不错 支持一下','好东西,先谢谢了','谢谢分享，有你精彩！','谢谢楼主分享']
-page = ['577','578','150']
-# page = ['763','737','772','773','759','661','660','768','748','606','464','39','770','667','705']
-
+# 回复的板块id
+# # 61软件 62游戏 63壁纸 41主题
+circleId = ['61','62','63','41']
+# 回复的内容
+content = ['好东西大家一起玩','不错的资源,谢谢分享。。。。。。','这东西可以玩玩','回帖是一种美德，顶贴是给楼主热心分享的动力！！！各位机油认真回复','真的吗，我来看看','真的那么神奇吗','看看能不能打开','一定要试试看，好不好用。','是不是真的啊大兄弟老铁666','厉害,可以,666','MIUI 因你更精彩!','Good，感谢分享~','辛苦了，后排支持一下！！！','赞一个,好东西!','感谢你的分享 ，期待分享更多给力资源！','顶。。。。。。。。。。。。。。。。','感觉分享!!!','支持一下!!!','不错 支持一下','好东西,先谢谢了','谢谢分享，有你精彩！','谢谢楼主分享']
+# 请求头和cookie
 headers = {
-		'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.62 Safari/537.36',
-		'Cookie': ''
-	}
+	'User-Agent':'Dalvik/2.1.0 (Linux; U; Android 8.0.0; MIX 2 MIUI/8.6.13)',
+	'Cookie':''
+}
 
-def get_index(url):
+# 获取列表
+def get_list(circleId):
+	circleId = str(circleId)
+	page = str(random.randint(1,10))
 	try:
-		res = requests.get(url,headers=headers)
+		# 获取资源
+		res = requests.get('https://api.bbs.miui.com/app/circle/circledisplay?circleId='+circleId+'&page='+page,headers=headers)
+		# 获取0到19的随机数
+		num = random.randint(0,19)
 		if res.status_code == 200:
-			return res.text
+			text = json.loads(res.text)
+			# 返回随机id
+			return text['list'][num]['id']
 		return None
 	except Exception as e:
 		return None
 
-def get_url(url,p,message):
-	soup = BeautifulSoup(get_index(url),'html.parser')
-	res = soup.select('.xst')
-	get_msg(choice(res)['href'].split('-')[1],p,message)
-
-def get_msg(tid,p,message):
+# 发送回复
+def  send(tid):
+	# 模拟回复接口
 	params = {
-		'formhash':'0354cc54',
-		'handlekey':'reply',
-		'noticeauthor':'',
-		'noticetrimstr':'',
-		'noticeauthormsg':'',
-		'usesig':1,
-		'ubbject':'',
-		'message':message
+		'attachnew':'',
+		'fromClient':'chiron',
+		'message':random.choice(content),
+		'tid':tid
 	}
-	res = requests.post('http://www.miui.com/forum.php?mod=post&infloat=yes&action=reply&fid='+str(p)+'&extra=&tid='+str(tid)+'&replysubmit=yes&inajax=1',headers=headers,params=params)
-	return res
-print('正在自动回复中...')
-x = 1
+	res = requests.post('https://api.bbs.miui.com/app/forum/reply',headers=headers,params=params)
+	return json.loads(res.text)
+
+success = 0
+error = 0
 while True:
-	if x>=50:
-		x=1
-	p = choice(page)
-	get_url('http://www.miui.com/forum-'+p+'-'+str(x)+'.html',p,choice(arr))
-	x = x+1
-	time.sleep(30)
-print('完成')
+	res = send(get_list(random.choice(circleId)))
+	if res['error'] == 0:
+		success += 1
+	else:
+		error += 1
+		print(res['desc'])
+	print('成功:%s次  失败:%s次' %(success,error))
+	time.sleep(20)
